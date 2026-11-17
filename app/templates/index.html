@@ -1,6 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
+  <h2>待复核的已供数小时（{{ reviews|length }}）</h2>
+  {% if reviews %}
+  <p class="warn-note">以下小时在登记供数后，上传的补传/修订已改变其雨量。请核对原值与现值后确认。</p>
+  <table>
+    <tr><th>站点</th><th>小时 (UTC)</th><th>原值 (mm)</th><th>现值 (mm)</th><th>现值状态</th><th></th></tr>
+    {% for s in reviews %}
+    <tr>
+      <td>{{ s.station }}</td>
+      <td>{{ s.hour }}</td>
+      <td>{{ "%.1f"|format(s.baseline_rainfall_mm) }}</td>
+      <td>{% if s.current_status == "ok" %}{{ "%.1f"|format(s.current_rainfall_mm) }}
+          {% else %}<span class="badge bad">不可供数</span>{% endif %}</td>
+      <td>{{ s.current_status }}</td>
+      <td><a href="{{ url_for('served_detail_html', served_id=s.served_id) }}">核对</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p><a href="{{ url_for('reviews_html') }}">查看完整待复核清单 →</a></p>
+  {% else %}
+  <p class="muted">暂无待复核小时（已供数 {{ served_count }} 个）。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>登记已供数</h2>
+  <form method="post" action="{{ url_for('register_served_html') }}">
+    <label>站点 <input type="text" name="station" required></label>
+    <label>整点小时（UTC） <input type="datetime-local" name="hour" step="3600" required></label>
+    <button type="submit">登记当前可供数的小时</button>
+  </form>
+  <p class="muted">只登记当前可供数（60 段齐全）的小时；登记时的雨量会被永久保留。
+    若该小时已登记，不会覆盖原登记（避免绕过复核）。</p>
+  <p><a href="{{ url_for('served_list_html') }}">已供数清单（{{ served_count }}）→</a></p>
+</div>
+
+<div class="card">
   <h2>上传 CSV</h2>
   <form method="post" action="{{ url_for('upload_html') }}" enctype="multipart/form-data">
     <p><input type="file" name="file" accept=".csv,text/csv"></p>

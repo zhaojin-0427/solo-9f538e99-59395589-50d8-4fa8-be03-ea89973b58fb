@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}已供数清单{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>已供数清单{% if station %}：{{ station }}{% endif %}</h2>
+  <form method="get" action="{{ url_for('served_list_html') }}">
+    <label>按站点筛选 <input type="text" name="station" value="{{ station }}"></label>
+    <button type="submit">筛选</button>
+  </form>
+  <p class="muted">登记时雨量为永久保留的原值；“确认基线”是最近一次确认后的雨量；
+    当前雨量与基线不同的小时进入<a href="{{ url_for('reviews_html') }}">待复核清单</a>。</p>
+  {% if items %}
+  <table>
+    <tr>
+      <th>站点</th><th>小时 (UTC)</th><th>登记时间 (UTC)</th>
+      <th>登记雨量 (mm)</th><th>确认基线 (mm)</th><th>当前雨量 (mm)</th>
+      <th>复核状态</th><th>最近确认 (UTC)</th><th></th>
+    </tr>
+    {% for s in items %}
+    <tr class="{{ 'changed' if s.needs_review else '' }}">
+      <td>{{ s.station }}</td>
+      <td>{{ s.hour }}</td>
+      <td>{{ s.registered_at }}</td>
+      <td class="num">{{ "%.1f"|format(s.registered_rainfall_mm) }}</td>
+      <td class="num">{{ "%.1f"|format(s.baseline_rainfall_mm) }}</td>
+      <td class="num">
+        {% if s.current_status == "ok" %}{{ "%.1f"|format(s.current_rainfall_mm) }}
+        {% else %}<span class="badge bad">不可供数</span>{% endif %}
+      </td>
+      <td>
+        {% if s.needs_review %}<span class="badge warn">待复核</span>
+        {% else %}<span class="badge ok">无变化</span>{% endif %}
+      </td>
+      <td>{{ s.confirmed_at or "—" }}</td>
+      <td><a href="{{ url_for('served_detail_html', served_id=s.served_id) }}">详情</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">尚无已供数登记。</p>
+  {% endif %}
+</div>
+{% endblock %}

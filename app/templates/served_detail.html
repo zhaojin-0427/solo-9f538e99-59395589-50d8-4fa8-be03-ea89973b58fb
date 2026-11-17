@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}已供数 {{ s.station }} {{ s.hour }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>已供数：{{ s.station }} @ {{ s.hour }}</h2>
+  <table>
+    <tr><th>登记时间 (UTC)</th><td>{{ s.registered_at }}</td></tr>
+    <tr><th>登记雨量（原登记值，永久保留）</th>
+        <td class="num">{{ "%.1f"|format(s.registered_rainfall_mm) }} mm
+            （{{ s.registered_total_pulses }} 脉冲）</td></tr>
+    <tr><th>确认基线（原值）</th>
+        <td class="num">{{ "%.1f"|format(s.baseline_rainfall_mm) }} mm
+            （{{ s.baseline_total_pulses }} 脉冲）</td></tr>
+    <tr><th>最近确认时间 (UTC)</th><td>{{ s.confirmed_at or "—" }}</td></tr>
+    <tr><th>当前雨量（现值）</th>
+        <td class="num">
+          {% if s.current_status == "ok" %}{{ "%.1f"|format(s.current_rainfall_mm) }} mm
+              （{{ s.current_total_pulses }} 脉冲）
+          {% else %}<span class="badge bad">不可供数</span>，缺口 {{ s.current_missing_intervals }} / 60 段
+          {% endif %}
+        </td></tr>
+    <tr><th>复核状态</th>
+        <td>{% if s.needs_review %}<span class="badge warn">待复核</span>
+            {% else %}<span class="badge ok">无变化</span>{% endif %}</td></tr>
+  </table>
+  <p>
+    <a href="{{ url_for('report_html', station=s.station, hour=s.hour) }}">查看该小时完整报告与逐段来源</a>
+  </p>
+</div>
+
+{% if s.needs_review %}
+<div class="card">
+  <h2>核对与确认</h2>
+  {% if s.confirmable %}
+  <div class="confirm-form">
+    <p>页面所见现值：<strong>{{ "%.1f"|format(s.current_rainfall_mm) }} mm</strong>
+       （原值 {{ "%.1f"|format(s.baseline_rainfall_mm) }} mm）。</p>
+    <p class="muted">点击确认时后端会重新计算并校验数据版本（当前版本 {{ s.current_version }}）；
+      若期间又有上传改变该小时，本次确认将被拒绝，清单保持待复核。</p>
+    <form method="post" action="{{ url_for('confirm_served_html', served_id=s.served_id) }}">
+      <input type="hidden" name="expected_version" value="{{ s.current_version }}">
+      <input type="hidden" name="expected_rainfall" value="{{ s.current_rainfall_mm }}">
+      <button type="submit">确认页面所见雨量 {{ "%.1f"|format(s.current_rainfall_mm) }} mm</button>
+    </form>
+  </div>
+  {% elif s.current_status != "ok" %}
+  <p class="badge bad">该小时当前不可供数（缺口 {{ s.current_missing_intervals }} / 60 段），
+     无法确认；请补传缺失读数后再核对。</p>
+  {% else %}
+  <p class="muted">当前雨量与基线一致，无需确认。</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>登记与确认轨迹</h2>
+  <table>
+    <tr><th>事件</th><th>时间 (UTC)</th><th>雨量 (mm)</th><th>脉冲</th><th>数据版本</th></tr>
+    {% for e in events %}
+    <tr>
+      <td>{{ "登记" if e.event == "registered" else "确认" }}</td>
+      <td>{{ e.at }}</td>
+      <td class="num">{{ "%.1f"|format(e.rainfall_mm) }}</td>
+      <td class="num">{{ e.total_pulses }}</td>
+      <td>{{ e.hour_version }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+<p><a href="{{ url_for('served_list_html') }}">返回已供数清单</a> ｜
+   <a href="{{ url_for('reviews_html') }}">待复核清单</a></p>
+{% endblock %}

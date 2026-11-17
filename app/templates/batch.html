@@ -11,6 +11,27 @@
   <p class="muted">本批次全部已接受行与批次记录在同一事务中写入；写入失败会整体回滚，不会留下半批新结果。</p>
 </div>
 
+{% if reviews %}
+<div class="card">
+  <h2>本批上传改变了以下已供数小时</h2>
+  <p class="warn-note">这些小时已进入待复核清单，请核对原值与现值后确认。</p>
+  <table>
+    <tr><th>站点</th><th>小时 (UTC)</th><th>原值 (mm)</th><th>现值 (mm)</th><th></th></tr>
+    {% for s in reviews %}
+    <tr>
+      <td>{{ s.station }}</td><td>{{ s.hour }}</td>
+      <td class="num">{{ "%.1f"|format(s.baseline_rainfall_mm) }}</td>
+      <td class="num">
+        {% if s.current_status == "ok" %}{{ "%.1f"|format(s.current_rainfall_mm) }}
+        {% else %}<span class="badge bad">不可供数</span>{% endif %}
+      </td>
+      <td><a href="{{ url_for('served_detail_html', served_id=s.served_id) }}">核对</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
 {% if report.rejected %}
 <div class="card">
   <h2>被拒绝的行</h2>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}待复核清单{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>待复核清单{% if station %}：{{ station }}{% endif %}（{{ reviews|length }}）</h2>
+  <form method="get" action="{{ url_for('reviews_html') }}">
+    <label>按站点筛选 <input type="text" name="station" value="{{ station }}"></label>
+    <button type="submit">筛选</button>
+  </form>
+  <p class="muted">仅列出登记供数后雨量已发生变化的小时；未变化的小时不在此清单。
+    原值 = 最近一次确认（或登记）时的雨量，现值 = 当前由读数计算出的雨量。</p>
+  {% if reviews %}
+  <table>
+    <tr>
+      <th>站点</th><th>小时 (UTC)</th><th>原值 (mm)</th><th>现值 (mm)</th>
+      <th>现值状态</th><th>现值缺口</th><th></th>
+    </tr>
+    {% for s in reviews %}
+    <tr>
+      <td>{{ s.station }}</td>
+      <td>{{ s.hour }}</td>
+      <td class="num">{{ "%.1f"|format(s.baseline_rainfall_mm) }}</td>
+      <td class="num">
+        {% if s.current_status == "ok" %}{{ "%.1f"|format(s.current_rainfall_mm) }}
+        {% else %}<span class="badge bad">不可供数</span>{% endif %}
+      </td>
+      <td>
+        {% if s.current_status == "ok" %}<span class="badge ok">可供数</span>
+        {% else %}<span class="badge bad">不可供数</span>{% endif %}
+      </td>
+      <td class="num">{{ s.current_missing_intervals }} / 60</td>
+      <td><a href="{{ url_for('served_detail_html', served_id=s.served_id) }}">核对并确认</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">当前没有待复核的小时。</p>
+  {% endif %}
+  <p class="muted">等效 API：<code>GET /api/reviews</code>，与网页使用同一服务层。</p>
+</div>
+{% endblock %}

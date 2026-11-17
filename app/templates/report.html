@@ -19,6 +19,36 @@
 </div>
 
 <div class="card">
+  <h2>已供数状态</h2>
+  {% if served_state %}
+  <p>已于 {{ served_state.registered_at }} 登记，登记雨量
+    <strong>{{ "%.1f"|format(served_state.registered_rainfall_mm) }} mm</strong>；
+    确认基线 {{ "%.1f"|format(served_state.baseline_rainfall_mm) }} mm。
+    {% if served_state.needs_review %}
+      <span class="badge warn">待复核</span>
+      {% if served_state.current_status == "ok" %}
+        现值 {{ "%.1f"|format(served_state.current_rainfall_mm) }} mm
+      {% else %}
+        现值不可供数（缺口 {{ served_state.current_missing_intervals }} / 60）
+      {% endif %}
+    {% else %}
+      <span class="badge ok">与基线一致</span>
+    {% endif %}
+  </p>
+  <p><a href="{{ url_for('served_detail_html', served_id=served_state.served_id) }}">查看登记详情并核对确认 →</a></p>
+  {% elif r.status == "ok" %}
+  <form method="post" action="{{ url_for('register_served_html') }}">
+    <input type="hidden" name="station" value="{{ r.station }}">
+    <input type="hidden" name="hour" value="{{ r.hour_start }}">
+    <button type="submit">把本小时登记为已供数（{{ "%.1f"|format(r.rainfall_mm) }} mm）</button>
+  </form>
+  <p class="muted">登记时会把当前雨量作为原值永久保留；之后上传改变该小时，会进入待复核清单。</p>
+  {% else %}
+  <p class="muted">本小时当前不可供数，不能登记为已供数。</p>
+  {% endif %}
+</div>
+
+<div class="card">
   <table>
     <tr><th>#</th><th>间隔 (UTC)</th><th>来源</th><th>脉冲</th><th>雨量 (mm)</th></tr>
     {% for it in r.intervals %}
